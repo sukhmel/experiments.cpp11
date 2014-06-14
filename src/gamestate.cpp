@@ -5,7 +5,7 @@ GameState::GameState(QObject *parent) :
 {
 }
 
-int GameState::xyToLinear(int x, int y) const
+int GameState::xyToLinear(int x, int y)
 {
     return x == y ?
                -1 :
@@ -171,9 +171,20 @@ void GameState::setScore(int player, int score)
     }
 }
 
+void GameState::record()
+{
+    history.append(state);
+}
+
 void GameState::update()
 {
-    std::memset(state.totals, 0, 4*sizeof(int));
+    state.update();
+    emit stateChanged();
+}
+
+void GameState::State::update()
+{
+    std::memset(totals, 0, 4*sizeof(int));
 
     for (int y = 0; y < 4; ++y)
     {
@@ -184,34 +195,88 @@ void GameState::update()
                 // score difference -- main reason of calculus
                 int diff = 0;
 
-                if ( isPlaying(x)
-                  && isPlaying(y) )
+                if ( playersSet[x]
+                  && playersSet[y] )
                 {
-                    diff = state.scores[x] - state.scores[y];
-                    if ( x == state.winnerPosition )
+                    diff = scores[x] - scores[y];
+                    if ( x == winnerPosition )
                     {
-                        diff =  state.scores[x];    // winner only receives
+                        diff =  scores[x];    // winner only receives
                     }
-                    if ( y == state.winnerPosition )
+                    if ( y == winnerPosition )
                     {
-                        diff = -state.scores[y];    // payments to winner
+                        diff = -scores[y];    // payments to winner
                     }
-                    if ( x == state.eastPosition
-                      || y == state.eastPosition )
+                    if ( x == eastPosition
+                      || y == eastPosition )
                     {
                         diff *= 2;          // east pays and receives twice
                     }
                 }
 
-                state.results[ xyToLinear(x, y)] = diff;
-                state.totals[x] += diff;
+                results[xyToLinear(x, y)] = diff;
+                totals[x] += diff;
             }
         }
     }
-    emit stateChanged();
 }
 
-void GameState::record()
+// -------------- SERIALIZATION ---------------
+
+QDataStream &operator<<(QDataStream &out, const GameState::State &data)
 {
-    history.append(state);
+   out << qint8(data.eastPosition)
+       << qint8(data.winnerPosition);
+
+   for (int i = 0; i < 4; ++i)
+   {
+       out <<        data.playersSet[i]
+           << qint32(data.scores    [i])
+           << qint32(data.overall   [i]);
+   }
+   return out;
+}
+
+
+QDataStream &operator>>(QDataStream &in, GameState::State &data)
+{
+    qint8 east, winner;
+    qint32 score, sums;
+
+    in >> east >> winner;
+    data.eastPosition   = east;
+    data.winnerPosition = winner;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        in >> data.playersSet[i]
+           >> score   >>   sums;
+
+        data.scores [i] = score;
+        data.overall[i] = sums ;
+    }
+
+    data.update();
+
+    return in;
+}
+
+
+QDataStream &operator<<(QDataStream &out, const GameState &data)
+{
+    out << data.state;
+    out << data.history;
+
+    return out;
+}
+
+
+QDataStream &operator>>(QDataStream &in, GameState &data)
+{
+    in >> data.state
+       >> data.history;
+
+    data.update();
+
+    return in;
 }

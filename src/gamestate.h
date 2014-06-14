@@ -10,10 +10,33 @@
 class GameState : public QObject
 {
     Q_OBJECT
+protected:
+    struct State
+    {
+        int eastPosition    = 0;
+        int winnerPosition  = -1;
+        bool playersSet [4] = { false
+                              , false
+                              , false
+                              , false
+                              };
+        int results [12]    = {};
+        int scores  [ 4]    = {};
+        int totals  [ 4]    = {};
+        int overall [ 4]    = {};
+
+        void update();
+    } state;
+
+    QVector<State> history;
+
+    void update();  // update state and emit stateChange signal.
+    void record();  // update history with current state,
+
 public:
     explicit GameState(QObject *parent = 0);
 
-    int xyToLinear(int x, int y) const;
+    static int xyToLinear(int x, int y);
 
     int getEast()   const;
     int getWinner() const;
@@ -29,6 +52,11 @@ public:
 
     QString getOverallHistory () const;
 
+    friend QDataStream &operator<<(QDataStream &out, const GameState &data);
+    friend QDataStream &operator>>(QDataStream &in,        GameState &data);
+    friend QDataStream &operator<<(QDataStream &out, const GameState::State &data);
+    friend QDataStream &operator>>(QDataStream &in,        GameState::State &data);
+
 signals:
     void stateChanged();
 
@@ -43,28 +71,10 @@ public slots:
     void setScore( int player
                  , int score);  // set score for Nth player
 
-protected:
-    struct State
-    {
-        int eastPosition    = 0;
-        int winnerPosition  = -1;
-        bool playersSet [4] = { false
-                              , false
-                              , false
-                              , false
-                              };
-        int results [12]    = {};
-        int scores  [ 4]    = {};
-        int totals  [ 4]    = {};
-        int overall [ 4]    = {};
-    } state;
-
-    QVector<State> history;
-
-    void update();
-
-    void record();  // update history with current state,
-                    //       and emit stateChange signal.
 };
+QDataStream &operator<<(QDataStream &out, const GameState        &data);
+QDataStream &operator>>(QDataStream &in,        GameState        &data);
+QDataStream &operator<<(QDataStream &out, const GameState::State &data);
+QDataStream &operator>>(QDataStream &in,        GameState::State &data);
 
 #endif // GAMESTATE_H

@@ -50,15 +50,18 @@ MahjCalc::MahjCalc(QWidget *parent)
 
     sum  = new Button("Sum up", this);
     undo = new Button("Undo", this);
+    load = new Button("Load", this);
     save = new Button("Save", this);
 
     growTextSize( sum, f);
     growTextSize(undo, f);
+    growTextSize(load, f);
     growTextSize(save, f);
-    save->setEnabled(false);
 
     connect(sum,  &Button::clicked, game, &GameState::sumUp);
     connect(undo, &Button::clicked, game, &GameState::undo );
+    connect(load, &Button::clicked, this, &MahjCalc::onGameLoad);
+    connect(save, &Button::clicked, this, &MahjCalc::onGameSave);
 
     fillTextual( totals,   4, f);
     fillTextual( overall,  4, f);
@@ -113,6 +116,7 @@ MahjCalc::MahjCalc(QWidget *parent)
     lowerRow->setSpacing(15);
     lowerRow->addWidget(sum );
     lowerRow->addWidget(undo);
+    lowerRow->addWidget(load);
     lowerRow->addWidget(save);
 
     mainColumn->addLayout(  upperRow);
@@ -239,6 +243,16 @@ void MahjCalc::onStateChanged()
     }
 }
 
+void MahjCalc::onGameLoad()
+{
+    IoHelper::load(this, this);
+}
+
+void MahjCalc::onGameSave()
+{
+    IoHelper::save(this, this);
+}
+
 bool MahjCalc::eventFilter(QObject *object, QEvent *event)
 {
     if ( event->type() == QEvent::FocusIn )
@@ -252,4 +266,30 @@ bool MahjCalc::eventFilter(QObject *object, QEvent *event)
         }
     }
     return false;
+}
+
+
+QDataStream &operator<<(QDataStream &out, const MahjCalc &data)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        out << data.players[i]->text();
+    }
+    out << *data.game;
+
+    return out;
+}
+
+
+QDataStream &operator>>(QDataStream &in, MahjCalc &data)
+{
+    QString temp;
+    for (int i = 0; i < 4; ++i)
+    {
+        in >> temp;
+        data.players[i]->setText(temp);
+    }
+    in >> *data.game;
+
+    return in;
 }

@@ -14,22 +14,18 @@
 #include <functional>
 
 #include "button.h"
+#include "iohelper.h"
 #include "gamestate.h"
 
 class MahjCalc : public QWidget
 {
     Q_OBJECT
 
-public:
-    MahjCalc(QWidget *parent = 0);
-
-public slots:
-    void onStateChanged();
-
 protected:
     Button *sum;
     Button *undo;
     Button *save;
+    Button *load;
 
     Button *east       [ 4];
     Button *winner     [ 4];
@@ -41,7 +37,7 @@ protected:
     QLineEdit *scores  [ 4];
     QLineEdit *players [ 4];
 
-    GameState *game;
+    GameState *game = 0;
 
     int currentWinner = -1;
 
@@ -97,6 +93,19 @@ protected:
             font.setPointSize(font.pointSize() + increase);
             widget->setFont(font);
     }
+
+public:
+    MahjCalc(QWidget *parent = 0);
+
+    friend QDataStream &operator<<(QDataStream &out, const MahjCalc &data);
+    friend QDataStream &operator>>(QDataStream &in,        MahjCalc &data);
+
+public slots:
+    void onStateChanged();
+    void onGameLoad();
+    void onGameSave();
 };
+QDataStream &operator<<(QDataStream &out, const MahjCalc &data);
+QDataStream &operator>>(QDataStream &in,        MahjCalc &data);
 
 #endif
