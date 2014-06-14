@@ -59,8 +59,11 @@ int GameState::getResult(int x, int y) const
 
 QString GameState::getOverallHistory() const
 {
-    QString result = "";
-    QTextStream builder(&result);
+    QString result [4];
+    QTextStream b0 (&result[0]);
+    QTextStream b1 (&result[1]);
+    QTextStream b2 (&result[2]);
+    QTextStream b3 (&result[3]);
 
     int temp [4] = {0,0,0,0};
 
@@ -70,32 +73,32 @@ QString GameState::getOverallHistory() const
         {
             std::memcpy(temp, rec.overall, 4*sizeof(int));
 
-            for (int i = 0; i < 4; ++i)
-            {
-                if (isPlaying(i))
-                {
-                    builder << "\t"
-                            << qSetFieldWidth(7)
-                            << right << temp[i];
-                }
-            }
-            builder << "\n";
+            b0 << temp[0] << "\n";
+            b1 << temp[1] << "\n";
+            b2 << temp[2] << "\n";
+            b3 << temp[3] << "\n";
         }
     }
 
     if (0 != std::memcmp(temp, state.overall, 4*sizeof(int)))
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            if (isPlaying(i))
-            {
-                builder << qSetFieldWidth(6)
-                        << center
-                        << state.overall[i];
-            }
-        }
+        b0 << state.overall[0] << "\n";
+        b1 << state.overall[1] << "\n";
+        b2 << state.overall[2] << "\n";
+        b3 << state.overall[3] << "\n";
     }
-    return result;
+
+    QString answer;
+    QTextStream b(&answer);
+    for (int i = 0; i < 4; ++i)
+    {
+        if (isPlaying(i))
+        {
+            b << result[i];
+        }
+        b << "##";
+    }
+    return answer;
 }
 
 // ------------ REACTING ON SIGNALS -------------

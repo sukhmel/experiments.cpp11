@@ -3,7 +3,7 @@
 MahjCalc::MahjCalc(QWidget *parent)
     : QWidget(parent)
 {
-    int f = 6;
+    int f = 4;
     game = new GameState(this);
     connect(game, &GameState::stateChanged, this, &MahjCalc::onStateChanged);
 
@@ -13,7 +13,7 @@ MahjCalc::MahjCalc(QWidget *parent)
                      {
                          game->setEast(i);
                      }
-                , 2*f );
+                , 3*f );
 
     fillNumbered( players
                 , &QLineEdit::textEdited
@@ -35,6 +35,7 @@ MahjCalc::MahjCalc(QWidget *parent)
 
     for (int i = 0; i < 4; ++i)
     {
+        scores[i]->installEventFilter(this);
         scores[i]->setAlignment(Qt::AlignRight);
         scores[i]->setValidator(new QIntValidator(0, 3000, this));
     }
@@ -59,16 +60,22 @@ MahjCalc::MahjCalc(QWidget *parent)
     connect(sum,  &Button::clicked, game, &GameState::sumUp);
     connect(undo, &Button::clicked, game, &GameState::undo );
 
-    history = new QTextEdit(this);
-    history->setFocusPolicy(Qt::NoFocus);
-    history->setReadOnly(true);
-
     fillTextual( totals,   4, f);
     fillTextual( overall,  4, f);
     fillTextual( results, 12, f
                , Qt::AlignRight);
 
-    for (int i = 0; i < 4; ++i) { overall[i]->setVisible(false); }
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+        {
+            if ( i != j )
+            {
+                connect( overall[i]->verticalScrollBar(), &QScrollBar::valueChanged
+                       , overall[j]->verticalScrollBar(), &QScrollBar::setValue  );
+            }
+        }
+    }
 
     QBoxLayout *mainColumn = new QBoxLayout(QBoxLayout::TopToBottom);
     mainColumn->setSpacing(15);
@@ -97,7 +104,7 @@ MahjCalc::MahjCalc(QWidget *parent)
         tempColumn->addLayout(scorColumn);
         tempColumn->addWidget(winner [i]);
         tempColumn->addWidget(totals [i]);
-        tempColumn->addWidget(overall[i]);
+        tempColumn->addWidget(overall[i], 1);
 
         upperRow->addLayout(tempColumn);
     }
@@ -109,7 +116,6 @@ MahjCalc::MahjCalc(QWidget *parent)
     lowerRow->addWidget(save);
 
     mainColumn->addLayout(  upperRow);
-    mainColumn->addWidget(history, 1);
     mainColumn->addLayout(  lowerRow);
 
     setLayout(mainColumn);
@@ -121,6 +127,15 @@ MahjCalc::MahjCalc(QWidget *parent)
 
 void MahjCalc::onStateChanged()
 {
+    QStringList history = game->getOverallHistory().split("##");
+
+    QTextBlockFormat centerFormat;
+    centerFormat.setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+    centerFormat.setTopMargin(0);
+    centerFormat.setLeftMargin(0);
+    centerFormat.setRightMargin(0);
+    centerFormat.setBottomMargin(0);
+
     int i = 0;
     for (; i < 4; ++i)
     {
@@ -142,22 +157,33 @@ void MahjCalc::onStateChanged()
         }
 
         {   // fancy win/lose/draw setup
-            if (i == game->getWinner())
+            winner[i]->setText(" ");
+            winner[i]->setEnabled(active);
+            winner[i]->setStyleSheet("color: black; "
+                                     "background-color: "
+                                     "rgb(200, 200, 200)");
+            if (active)
             {
-                winner[i]->setText( "Won!" );
-                winner[i]->setStyleSheet("color: black; background-color: rgb(200, 250, 200)");
-            }
-            else
-            {
-                if (game->getWinner() < 0)
+                if (i == game->getWinner())
                 {
-                    winner[i]->setText( "draw" );
-                    winner[i]->setStyleSheet("color: black; background-color: rgb(200, 200, 200)");
+                    winner[i]->setText( "Won!" );
+                    winner[i]->setStyleSheet("color: black; "
+                                             "background-color: "
+                                             "rgb(200, 250, 200)");
                 }
                 else
                 {
-                    winner[i]->setText( "lost" );
-                    winner[i]->setStyleSheet("color: black; background-color: rgb(250, 200, 200)");
+                    if (game->getWinner() < 0)
+                    {
+                        winner[i]->setText( "draw" );
+                    }
+                    else
+                    {
+                        winner[i]->setText( "lost" );
+                        winner[i]->setStyleSheet("color: black; "
+                                                 "background-color: "
+                                                 "rgb(250, 200, 200)");
+                    }
                 }
             }
         }
@@ -166,21 +192,23 @@ void MahjCalc::onStateChanged()
         totals[i]->setEnabled(active);
 
         { // fancy overall with colors
-            double value   = abs(game->getOverall(i));
             QString format = game->getOverall(i) < 0 ?
-                                  "rgb(%1, 100, %2)" :
-                                  "rgb(100, %1, %2)" ;
-            format = format.arg( value < 10  ?  100  :
-                    255 - 155/log10(value), 3, 'f', 0)
-                              .arg( value < 10 ? 200 :
-                        200/log10(value), 3, 'f', 0) ;
+                                "rgb(250, 200, 200)" :
+                             game->getOverall(i) > 0 ?
+                                "rgb(200, 250, 200)" :
+                                "rgb(200, 200, 200)" ;
 
-            autoSetText(overall, i, &GameState::getOverall);
+            overall[i]->clear();
+            QTextCursor cursor(overall[i]->document());
+            cursor.movePosition(QTextCursor::End);
+            cursor.insertBlock();
+            cursor.mergeBlockFormat(centerFormat);
+            cursor.insertText(history.at(i));
+
+            overall[i]->setAlignment(Qt::AlignCenter);
             overall[i]->setEnabled(active);
             overall[i]->setStyleSheet("color: black; background-color: " + format);
         }
-
-        history->setText(game->getOverallHistory());
 
         autoSetText(results, i, &GameState::getResult );
         results[i]->setEnabled(active);
@@ -209,4 +237,19 @@ void MahjCalc::onStateChanged()
                                  && game->isPlaying(y));
         }
     }
+}
+
+bool MahjCalc::eventFilter(QObject *object, QEvent *event)
+{
+    if ( event->type() == QEvent::FocusIn )
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            if ( object == scores[i] )
+            {
+                scores[i]->clear();
+            }
+        }
+    }
+    return false;
 }

@@ -2,10 +2,12 @@
 #define CALCULATOR_H
 
 #include <QLabel>
+#include <QEvent>
 #include <QWidget>
 #include <QTextEdit>
 #include <QLineEdit>
 #include <QBoxLayout>
+#include <QScrollBar>
 #include <QIntValidator>
 
 #include <math.h>
@@ -33,17 +35,17 @@ protected:
     Button *winner     [ 4];
 
     QLineEdit *totals  [ 4];
-    QLineEdit *overall [ 4];
+    QTextEdit *overall [ 4];
     QLineEdit *results [12];
 
     QLineEdit *scores  [ 4];
     QLineEdit *players [ 4];
 
-    QTextEdit *history;
-
     GameState *game;
 
     int currentWinner = -1;
+
+    bool eventFilter(QObject *object, QEvent *event);
 
     template <class T, class Q, class A, typename F>
     void fillNumbered ( T** list
