@@ -17,8 +17,10 @@ public:
             QFileDialog::getSaveFileName
                 ( parent
                 , "Save game"
-                , "."
-                , "Mahjong saves (*.mjg)");
+                , ""
+                , "Mahjong saves (*.mjg)"
+                , 0
+                , QFileDialog::HideNameFilterDetails);
 
         if (!filename.isEmpty())
         {
@@ -43,8 +45,10 @@ public:
             QFileDialog::getOpenFileName
                 ( parent
                 , "Save game"
-                , "."
-                , "Mahjong saves (*.mjg)");
+                , ""
+                , "Mahjong saves (*.mjg)"
+                , 0
+                , QFileDialog::HideNameFilterDetails);
 
         if (!filename.isEmpty())
         {

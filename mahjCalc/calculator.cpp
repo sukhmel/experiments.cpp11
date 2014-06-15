@@ -2,89 +2,23 @@
 
 MahjCalc::MahjCalc(QWidget *parent)
     : QWidget(parent)
+    , game(new GameState(this))
 {
-    int f = 4;
-    game = new GameState(this);
-    connect(game, &GameState::stateChanged, this, &MahjCalc::onStateChanged);
+    setControls();
 
-    fillNumbered( east
-                , &Button::clicked
-                , [&](int i, bool)
-                     {
-                         game->setEast(i);
-                     }
-                , 3*f );
+    setConnections();
 
-    fillNumbered( players
-                , &QLineEdit::textEdited
-                , [&](int i, const QString &t)
-                     {
-                         game->setPlayer(i, !t.isEmpty());
-                     }
-                , f );
+    setLayout();
 
-    for (int i = 0; i < 4; ++i) { players[i]->setAlignment(Qt::AlignCenter); }
+    setWindowTitle(tr("Mahjong Calculator"));
 
-    fillNumbered( scores
-                , &QLineEdit::textEdited
-                , [&](int i, const QString &t)
-                     {
-                         game->setScore(i, t.toInt());
-                     }
-                , f);
+    onStateChanged();
+}
 
-    for (int i = 0; i < 4; ++i)
-    {
-        scores[i]->installEventFilter(this);
-        scores[i]->setAlignment(Qt::AlignRight);
-        scores[i]->setValidator(new QIntValidator(0, 3000, this));
-    }
-
-    fillNumbered( winner
-                , &Button::clicked
-                , [&](int i, bool)
-                     {
-                         game->setWinner(i);
-                     }
-                , f );
-
-    sum  = new Button("Sum up", this);
-    undo = new Button("Undo", this);
-    load = new Button("Load", this);
-    save = new Button("Save", this);
-
-    growTextSize( sum, f);
-    growTextSize(undo, f);
-    growTextSize(load, f);
-    growTextSize(save, f);
-
-    connect(sum,  &Button::clicked, game, &GameState::sumUp);
-    connect(undo, &Button::clicked, game, &GameState::undo );
-    connect(load, &Button::clicked, this, &MahjCalc::onGameLoad);
-    connect(save, &Button::clicked, this, &MahjCalc::onGameSave);
-
-    fillTextual( totals,   4, f);
-    fillTextual( overall,  4, f);
-    fillTextual( results, 12, f
-               , Qt::AlignRight);
-
-    for (int i = 0; i < 4; ++i)
-    {
-        for (int j = 0; j < 4; ++j)
-        {
-            if ( i != j )
-            {
-                connect( overall[i]->verticalScrollBar(), &QScrollBar::valueChanged
-                       , overall[j]->verticalScrollBar(), &QScrollBar::setValue  );
-            }
-        }
-    }
-
-    QBoxLayout *mainColumn = new QBoxLayout(QBoxLayout::TopToBottom);
-    mainColumn->setSpacing(15);
-
-    QBoxLayout *upperRow = new QBoxLayout(QBoxLayout::LeftToRight);
-    upperRow->setSpacing(0);
+void MahjCalc::setLayout()
+{
+    QBoxLayout *mainRow = new QBoxLayout(QBoxLayout::LeftToRight);
+    mainRow->setSpacing(0);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -108,25 +42,103 @@ MahjCalc::MahjCalc(QWidget *parent)
         tempColumn->addWidget(winner [i]);
         tempColumn->addWidget(totals [i]);
         tempColumn->addWidget(overall[i], 1);
+        tempColumn->addWidget(control[i]);
 
-        upperRow->addLayout(tempColumn);
+        mainRow->addLayout(tempColumn);
     }
 
-    QBoxLayout *lowerRow = new QBoxLayout(QBoxLayout::LeftToRight);
-    lowerRow->setSpacing(15);
-    lowerRow->addWidget(sum );
-    lowerRow->addWidget(undo);
-    lowerRow->addWidget(load);
-    lowerRow->addWidget(save);
+    QWidget::setLayout(mainRow);
+}
 
-    mainColumn->addLayout(  upperRow);
-    mainColumn->addLayout(  lowerRow);
+void MahjCalc::setControls()
+{
+#ifdef Q_OS_ANDROID
+    #define FONTGROW      2
+    #define BIG_FONTGROW 16
+#else
+    #define FONTGROW      4
+    #define BIG_FONTGROW 12
+#endif
 
-    setLayout(mainColumn);
+    fillNumbered( east
+                , &Button::clicked
+                , [&](int i, bool)
+                     {
+                         game->setEast(i);
+                     }
+                , BIG_FONTGROW  );
 
-    setWindowTitle(tr("Mahjong Calculator"));
+    fillNumbered( players
+                , &QLineEdit::textEdited
+                , [&](int i, const QString &t)
+                     {
+                         game->setPlayer(i, !t.isEmpty());
+                     }
+                , FONTGROW  );
 
-    onStateChanged();
+    fillNumbered( scores
+                , &QLineEdit::textEdited
+                , [&](int i, const QString &t)
+                     {
+                         game->setScore(i, t.toInt());
+                     }
+                , FONTGROW );
+
+    fillNumbered( winner
+                , &Button::clicked
+                , [&](int i, bool)
+                     {
+                         game->setWinner(i);
+                     }
+                , FONTGROW );
+
+    Button  *sum = new Button("Sum up", this);
+    Button *undo = new Button("Undo", this);
+    Button *load = new Button("Load", this);
+    Button *save = new Button("Save", this);
+
+    fillTextual( totals,   4, FONTGROW );
+    fillTextual( overall,  4, FONTGROW );
+    fillTextual( results, 12, FONTGROW
+               , Qt::AlignRight);
+
+    control[0] =  sum;
+    control[1] = undo;
+    control[2] = load;
+    control[3] = save;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        players[i]->setAlignment(Qt::AlignCenter);
+        players[i]->setTextMargins(0,0,0,0);
+
+        scores[i]->installEventFilter(this);
+        scores[i]->setAlignment(Qt::AlignRight);
+        scores[i]->setValidator(new QIntValidator(0, 3000, this));
+
+        growTextSize(control[i], FONTGROW );
+
+        for (int j = 0; j < 4; ++j)
+        {
+            if ( i != j )
+            {
+                connect( overall[i]->verticalScrollBar(), &QScrollBar::valueChanged
+                       , overall[j]->verticalScrollBar(), &QScrollBar::setValue  );
+            }
+        }
+    }
+#undef FONTGROW
+#undef BIG_FONTGROW
+}
+
+void MahjCalc::setConnections()
+{
+    connect(game, &GameState::stateChanged, this, &MahjCalc::onStateChanged);
+
+    connect(control[0],  &Button::clicked, game, &GameState::sumUp);
+    connect(control[1], &Button::clicked, game, &GameState::undo );
+    connect(control[2], &Button::clicked, this, &MahjCalc::onGameLoad);
+    connect(control[3], &Button::clicked, this, &MahjCalc::onGameSave);
 }
 
 void MahjCalc::onStateChanged()
@@ -207,7 +219,7 @@ void MahjCalc::onStateChanged()
             cursor.movePosition(QTextCursor::End);
             cursor.insertBlock();
             cursor.mergeBlockFormat(centerFormat);
-            cursor.insertText(history.at(i));
+            cursor.insertHtml(history.at(i));
 
             overall[i]->setAlignment(Qt::AlignCenter);
             overall[i]->setEnabled(active);

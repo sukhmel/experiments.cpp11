@@ -59,13 +59,15 @@ int GameState::getResult(int x, int y) const
 
 QString GameState::getOverallHistory() const
 {
-    QString result [4];
-    QTextStream b0 (&result[0]);
-    QTextStream b1 (&result[1]);
-    QTextStream b2 (&result[2]);
-    QTextStream b3 (&result[3]);
+    QString column [4];
+    QTextStream* b [4];
+    for (int i = 0; i < 4; ++i)
+    {
+        b[i] = new QTextStream(&column[i]);
+    }
 
     int temp [4] = {0,0,0,0};
+    int winner   = -1;
 
     for (auto rec : history)
     {
@@ -73,30 +75,54 @@ QString GameState::getOverallHistory() const
         {
             std::memcpy(temp, rec.overall, 4*sizeof(int));
 
-            b0 << temp[0] << "\n";
-            b1 << temp[1] << "\n";
-            b2 << temp[2] << "\n";
-            b3 << temp[3] << "\n";
+            for (int i = 0; i < 4; ++i)
+            {
+                if (i == winner)
+                {
+                    *b[i] << "<u>";
+                }
+
+                *b[i] << temp[i];
+
+                if (i == winner)
+                {
+                    *b[i] << "</u>";
+                }
+
+                *b[i] << "<br>";
+            }
         }
+        winner = rec.winnerPosition;
     }
 
     if (0 != std::memcmp(temp, state.overall, 4*sizeof(int)))
     {
-        b0 << state.overall[0] << "\n";
-        b1 << state.overall[1] << "\n";
-        b2 << state.overall[2] << "\n";
-        b3 << state.overall[3] << "\n";
+        for (int i = 0; i < 4; ++i)
+        {
+            if (i == winner)
+            {
+                *b[i] << "<i>";
+            }
+
+            *b[i] << state.overall[i] << "\n";
+
+            if (i == winner)
+            {
+                *b[i] << "</i>";
+            }
+        }
     }
 
     QString answer;
-    QTextStream b(&answer);
+    QTextStream result(&answer);
     for (int i = 0; i < 4; ++i)
     {
         if (isPlaying(i))
         {
-            b << result[i];
+            result << column[i];
         }
-        b << "##";
+        result << "##";
+        delete b[i];
     }
     return answer;
 }

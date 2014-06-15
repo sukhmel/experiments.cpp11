@@ -22,13 +22,9 @@ class MahjCalc : public QWidget
     Q_OBJECT
 
 protected:
-    Button *sum;
-    Button *undo;
-    Button *save;
-    Button *load;
-
     Button *east       [ 4];
     Button *winner     [ 4];
+    Button *control    [ 4];
 
     QLineEdit *totals  [ 4];
     QTextEdit *overall [ 4];
@@ -42,6 +38,10 @@ protected:
     int currentWinner = -1;
 
     bool eventFilter(QObject *object, QEvent *event);
+
+    void setLayout();
+    void setControls();
+    void setConnections();
 
     template <class T, class Q, class A, typename F>
     void fillNumbered ( T** list
