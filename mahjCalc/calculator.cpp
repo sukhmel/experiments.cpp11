@@ -17,8 +17,14 @@ MahjCalc::MahjCalc(QWidget *parent)
 
 void MahjCalc::setLayout()
 {
-    QBoxLayout *mainRow = new QBoxLayout(QBoxLayout::LeftToRight);
-    mainRow->setSpacing(0);
+    QBoxLayout *mainCol = new QBoxLayout(QBoxLayout::TopToBottom);
+    mainCol->setSpacing(15);
+
+    QBoxLayout *topRow = new QBoxLayout(QBoxLayout::LeftToRight);
+    topRow->setSpacing(0);
+
+    QBoxLayout *bottomRow = new QBoxLayout(QBoxLayout::LeftToRight);
+    bottomRow->setSpacing(0);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -41,13 +47,17 @@ void MahjCalc::setLayout()
         tempColumn->addLayout(scorColumn);
         tempColumn->addWidget(winner [i]);
         tempColumn->addWidget(totals [i]);
-        tempColumn->addWidget(overall[i], 1);
-        tempColumn->addWidget(control[i]);
 
-        mainRow->addLayout(tempColumn);
+        bottomRow->addWidget(control[i]);
+
+        topRow->addLayout(tempColumn);
     }
 
-    QWidget::setLayout(mainRow);
+    mainCol->addLayout(topRow);
+    mainCol->addWidget(overall, 1);
+    mainCol->addLayout( bottomRow);
+
+    QWidget::setLayout(mainCol);
 }
 
 void MahjCalc::setControls()
@@ -98,9 +108,14 @@ void MahjCalc::setControls()
     Button *save = new Button("Save", this);
 
     fillTextual( totals,   4, FONTGROW );
-    fillTextual( overall,  4, FONTGROW );
     fillTextual( results, 12, FONTGROW
                , Qt::AlignRight);
+
+    overall = new QTextEdit(this);
+    overall->setReadOnly(true);
+    overall->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    overall->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    growTextSize(overall, FONTGROW);
 
     control[0] =  sum;
     control[1] = undo;
@@ -117,15 +132,6 @@ void MahjCalc::setControls()
         scores[i]->setValidator(new QIntValidator(0, 3000, this));
 
         growTextSize(control[i], FONTGROW );
-
-        for (int j = 0; j < 4; ++j)
-        {
-            if ( i != j )
-            {
-                connect( overall[i]->verticalScrollBar(), &QScrollBar::valueChanged
-                       , overall[j]->verticalScrollBar(), &QScrollBar::setValue  );
-            }
-        }
     }
 #undef FONTGROW
 #undef BIG_FONTGROW
@@ -135,7 +141,7 @@ void MahjCalc::setConnections()
 {
     connect(game, &GameState::stateChanged, this, &MahjCalc::onStateChanged);
 
-    connect(control[0],  &Button::clicked, game, &GameState::sumUp);
+    connect(control[0], &Button::clicked, game, &GameState::sumUp);
     connect(control[1], &Button::clicked, game, &GameState::undo );
     connect(control[2], &Button::clicked, this, &MahjCalc::onGameLoad);
     connect(control[3], &Button::clicked, this, &MahjCalc::onGameSave);
@@ -143,14 +149,12 @@ void MahjCalc::setConnections()
 
 void MahjCalc::onStateChanged()
 {
-    QStringList history = game->getOverallHistory().split("##");
+    overall->setHtml(game->getOverallHistory());
 
-    QTextBlockFormat centerFormat;
-    centerFormat.setAlignment(Qt::AlignHCenter | Qt::AlignTop);
-    centerFormat.setTopMargin(0);
-    centerFormat.setLeftMargin(0);
-    centerFormat.setRightMargin(0);
-    centerFormat.setBottomMargin(0);
+    QTextCursor cur(overall->document());
+    cur.movePosition(QTextCursor::End);
+
+    overall->setTextCursor(cur);
 
     int i = 0;
     for (; i < 4; ++i)
@@ -206,25 +210,6 @@ void MahjCalc::onStateChanged()
 
         autoSetText(totals,  i, &GameState::getTotal  );
         totals[i]->setEnabled(active);
-
-        { // fancy overall with colors
-            QString format = game->getOverall(i) < 0 ?
-                                "rgb(250, 200, 200)" :
-                             game->getOverall(i) > 0 ?
-                                "rgb(200, 250, 200)" :
-                                "rgb(200, 200, 200)" ;
-
-            overall[i]->clear();
-            QTextCursor cursor(overall[i]->document());
-            cursor.movePosition(QTextCursor::End);
-            cursor.insertBlock();
-            cursor.mergeBlockFormat(centerFormat);
-            cursor.insertHtml(history.at(i));
-
-            overall[i]->setAlignment(Qt::AlignCenter);
-            overall[i]->setEnabled(active);
-            overall[i]->setStyleSheet("color: black; background-color: " + format);
-        }
 
         autoSetText(results, i, &GameState::getResult );
         results[i]->setEnabled(active);

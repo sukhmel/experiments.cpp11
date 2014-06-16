@@ -59,72 +59,56 @@ int GameState::getResult(int x, int y) const
 
 QString GameState::getOverallHistory() const
 {
-    QString column [4];
-    QTextStream* b [4];
-    for (int i = 0; i < 4; ++i)
-    {
-        b[i] = new QTextStream(&column[i]);
-    }
+    QString        result ;
+    QTextStream b(&result);
 
     int temp [4] = {0,0,0,0};
     int winner   = -1;
 
-    for (auto rec : history)
+    auto process = [&](const State &s)
     {
-        if (0 != std::memcmp(temp, rec.overall, 4*sizeof(int)))
+        if (0 != std::memcmp(temp, s.overall, 4*sizeof(int)))
         {
-            std::memcpy(temp, rec.overall, 4*sizeof(int));
+            std::memcpy(temp, s.overall, 4*sizeof(int));
 
+            b << "<tr>";
             for (int i = 0; i < 4; ++i)
             {
-                if (i == winner)
+
+                b << "<td align=center width=25% bgcolor=#"
+                  << (!s.playersSet[i] ||
+                       -1  ==  winner  ?
+                              "C8C8C8" :
+                        i  ==  winner  ?
+                              "C8FAC8" :
+                              "FAC8C8" )
+                  << ">";
+                if (s.playersSet[i])
                 {
-                    *b[i] << "<u>";
+                    b << temp[i];
                 }
-
-                *b[i] << temp[i];
-
-                if (i == winner)
-                {
-                    *b[i] << "</u>";
-                }
-
-                *b[i] << "<br>";
+                b << "</td>";
             }
+            b << "</tr>";
         }
-        winner = rec.winnerPosition;
-    }
+        winner = s.winnerPosition;
+    };
 
-    if (0 != std::memcmp(temp, state.overall, 4*sizeof(int)))
+    b << "<table border=0"
+               " margin=0"
+               " padding=0"
+               " width=100%>";
+
+    for (auto rec : history)
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            if (i == winner)
-            {
-                *b[i] << "<i>";
-            }
-
-            *b[i] << state.overall[i] << "\n";
-
-            if (i == winner)
-            {
-                *b[i] << "</i>";
-            }
-        }
+        process(rec);
     }
 
-    QString answer;
-    QTextStream result(&answer);
-    for (int i = 0; i < 4; ++i)
-    {
-        if (isPlaying(i))
-        {
-            result << column[i];
-        }
-        result << "##";
-        delete b[i];
-    }
-    return answer;
+    process(state);
+
+    b << "</table>";
+
+    return result;
 }
 
 // ------------ REACTING ON SIGNALS -------------

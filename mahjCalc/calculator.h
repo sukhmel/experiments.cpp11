@@ -27,11 +27,12 @@ protected:
     Button *control    [ 4];
 
     QLineEdit *totals  [ 4];
-    QTextEdit *overall [ 4];
     QLineEdit *results [12];
 
     QLineEdit *scores  [ 4];
     QLineEdit *players [ 4];
+
+    QTextEdit *overall;
 
     GameState *game = 0;
 
