@@ -1,6 +1,7 @@
 build/*
 *.pro.user
 */*.pro.user
+*.exe
 
 #################
 ## Eclipse
